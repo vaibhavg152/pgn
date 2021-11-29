@@ -368,7 +368,7 @@ class Batcher(object):
       	try:
       	    file_id = Path(fname).stem
       	    split = Path(fname).parent.stem
-      	    filepath = '/Data/anubhavcs17/asurl/cluster_abs/{}/{}_{}/{}/{}.json'.format('use', 'use', 'kmed', split, file_id)
+      	    filepath = '/home/vaibhav/summarisation//cluster/pgn/{}/{}_{}/{}/{}.json'.format('use', 'use', 'kmed', split, file_id)
       	    if split == 'train':
       	    	num_clusters = len(abs)
       	    clustered_articles = ["" for _ in range(num_clusters)]
