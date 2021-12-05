@@ -45,6 +45,7 @@ class Example(object):
     # Get ids of special tokens
     start_decoding = vocab.word2id(data.START_DECODING)
     stop_decoding = vocab.word2id(data.STOP_DECODING)
+    self.art = article
 
     # Process the article
     article_words = article.split()
@@ -334,6 +335,7 @@ class Batcher(object):
         if not self._single_pass:
           shuffle(batches)
         for b in batches:  # each b is a list of Example objects
+          print(b)
           self._batch_queue.put(Batch(b, self._hps, self._vocab))
 
       else: # beam search decode mode
@@ -363,6 +365,7 @@ class Batcher(object):
 
 
   def text_gen(self, eg_gen):
+      global num_clusters
       while True:
       	art, abs, fname = eg_gen.next()
       	try:
@@ -388,6 +391,7 @@ class Batcher(object):
         else:
             for idx, cluster in enumerate(clustered_articles):
             	if split == 'train':
+                    print(cluster, abs[idx])
             	    yield (cluster, abs[idx])
             	else:
             	    yield (cluster, abs)
