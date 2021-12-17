@@ -37,7 +37,7 @@ tf.app.flags.DEFINE_string('vocab_path', '', 'Path expression to text vocabulary
 
 # Important settings
 tf.app.flags.DEFINE_string('mode', 'train', 'must be one of train/eval/decode')
-tf.app.flags.DEFINE_boolean('single_pass', False, 'For decode mode only. If True, run eval on the full dataset using a fixed checkpoint, i.e. take the current checkpoint, and use it to produce one summary for each example in the dataset, write the summaries to file and then get ROUGE scores for the whole dataset. If False (default), run concurrent decoding, i.e. repeatedly load latest checkpoint, use it to produce summaries for randomly-chosen examples and log the results to screen, indefinitely.')
+tf.app.flags.DEFINE_boolean('single_pass', True, 'For decode mode only. If True, run eval on the full dataset using a fixed checkpoint, i.e. take the current checkpoint, and use it to produce one summary for each example in the dataset, write the summaries to file and then get ROUGE scores for the whole dataset. If False (default), run concurrent decoding, i.e. repeatedly load latest checkpoint, use it to produce summaries for randomly-chosen examples and log the results to screen, indefinitely.')
 
 # Where to save output
 tf.app.flags.DEFINE_string('log_root', '', 'Root directory for all logging.')
@@ -56,7 +56,7 @@ tf.app.flags.DEFINE_integer('max_dec_steps', 25, 'max timesteps of decoder (max 
 tf.app.flags.DEFINE_integer('min_dec_steps', 10, 'Minimum sequence length of generated summary. Applies only for beam search decoding mode')
 tf.app.flags.DEFINE_integer('beam_size', 3, 'beam size for beam search decoding.')
 tf.app.flags.DEFINE_integer('vocab_size', 50000, 'Size of vocabulary. These will be read from the vocabulary file in order. If the vocabulary file contains fewer words than this number, or if this number is set to 0, will take all words in the vocabulary file.')
-tf.app.flags.DEFINE_float('lr', 0.15, 'learning rate')
+tf.app.flags.DEFINE_float('lr', 0.1, 'learning rate')
 tf.app.flags.DEFINE_float('adagrad_init_acc', 0.1, 'initial accumulator value for Adagrad')
 tf.app.flags.DEFINE_float('rand_unif_init_mag', 0.02, 'magnitude for lstm cells random uniform inititalization')
 tf.app.flags.DEFINE_float('trunc_norm_init_std', 1e-4, 'std of trunc norm init, used for initializing everything else')
@@ -154,7 +154,7 @@ def convert_to_coverage_model():
   exit()
 
 
-def setup_training(model, batcher):
+def setup_training(model, batcher, N=1):
   """Does setup before starting training (run_training)"""
   train_dir = os.path.join(FLAGS.log_root, "train")
   if not os.path.exists(train_dir): os.makedirs(train_dir)
@@ -176,7 +176,7 @@ def setup_training(model, batcher):
                      global_step=model.global_step)
   summary_writer = sv.summary_writer
   tf.logging.info("Preparing or waiting for session...")
-  sess_context_manager = sv.prepare_or_wait_for_session(config=util.get_config())
+  sess_context_manager = sv.prepare_or_wait_for_session(config=util.get_config(N))
   tf.logging.info("Created session.")
   try:
     run_training(model, batcher, sess_context_manager, sv, summary_writer) # this is an infinite loop until interrupted
@@ -189,20 +189,36 @@ def run_training(model, batcher, sess_context_manager, sv, summary_writer):
   """Repeatedly runs training iterations, logging loss to screen and writing summaries"""
   tf.logging.info("starting run_training")
   with sess_context_manager as sess:
+    iter = 0
+    t0 = time.time()
     if FLAGS.debug: # start the tensorflow debugger
       sess = tf_debug.LocalCLIDebugWrapperSession(sess)
       sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
     while True: # repeats until interrupted
+      iter += 1
+      verbose = iter % 20==0
       batch = batcher.next_batch()
 
-      tf.logging.info('running training step...')
-      t0=time.time()
-      results = model.run_train_step(sess, batch)
-      t1=time.time()
-      tf.logging.info('seconds for training step: %.3f', t1-t0)
+      if verbose:
+        tf.logging.info('running training step...')
+        # for b in batch.list:
+        #   print(b)
+        #   break
+
+      try:
+        results = model.run_train_step(sess, batch)
+      except:
+        for b in batch.list:
+          # print(b)
+          continue
+      if verbose:
+        t1=time.time()
+        tf.logging.info('seconds for training step: %.3f', t1-t0)
+        t0=time.time()
 
       loss = results['loss']
-      tf.logging.info('loss: %f', loss) # print the loss to screen
+      if verbose:
+        tf.logging.info('loss: %f', loss) # print the loss to screen
 
       if not np.isfinite(loss):
         raise Exception("Loss is not finite. Stopping.")

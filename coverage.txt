@@ -1,0 +1,4 @@
+gold: 65.30
+our: 64.15
+pgn-coverage: 45.40
+pgn+coverage: 44.16

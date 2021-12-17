@@ -21,7 +21,7 @@ import time
 import os
 FLAGS = tf.app.flags.FLAGS
 
-def get_config():
+def get_config(N=1):
   """Returns config for tf.session"""
   config = tf.ConfigProto(allow_soft_placement=True)
   config.gpu_options.allow_growth=True
