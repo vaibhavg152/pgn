@@ -343,7 +343,6 @@ class Batcher(object):
 
     In decode mode, makes batches that each contain a single example repeated.
     """
-<<<<<<< HEAD
         while True:
             if self._hps.mode != 'decode':
                 # Get bucketing_cache_size-many batches of Examples into a list, then sort
@@ -359,9 +358,6 @@ class Batcher(object):
                 if not self._single_pass:
                     shuffle(batches)
                 for b in batches:  # each b is a list of Example objects
-                    # for d in b:
-                    #     print(d)
-                    #     raise ValueError()
                     self._batch_queue.put(Batch(b, self._hps, self._vocab))
 
             else:  # beam search decode mode
@@ -433,84 +429,6 @@ class Batcher(object):
 
     def text_generator(self, example_generator):
         """Generates article and abstract text from tf.Example.
-=======
-    while True:
-      if self._hps.mode != 'decode':
-        # Get bucketing_cache_size-many batches of Examples into a list, then sort
-        inputs = []
-        for _ in xrange(self._hps.batch_size * self._bucketing_cache_size):
-          inputs.append(self._example_queue.get())
-        inputs = sorted(inputs, key=lambda inp: inp.enc_len) # sort by length of encoder sequence
-
-        # Group the sorted Examples into batches, optionally shuffle the batches, and place in the batch queue.
-        batches = []
-        for i in xrange(0, len(inputs), self._hps.batch_size):
-          batches.append(inputs[i:i + self._hps.batch_size])
-        if not self._single_pass:
-          shuffle(batches)
-        for b in batches:  # each b is a list of Example objects
-          self._batch_queue.put(Batch(b, self._hps, self._vocab))
-
-      else: # beam search decode mode
-        ex = self._example_queue.get()
-        b = [ex for _ in xrange(self._hps.batch_size)]
-        self._batch_queue.put(Batch(b, self._hps, self._vocab))
-
-
-  def watch_threads(self):
-    """Watch example queue and batch queue threads and restart if dead."""
-    while True:
-      time.sleep(60)
-      for idx,t in enumerate(self._example_q_threads):
-        if not t.is_alive(): # if the thread is dead
-          tf.logging.error('Found example queue thread dead. Restarting.')
-          new_t = Thread(target=self.fill_example_queue)
-          self._example_q_threads[idx] = new_t
-          new_t.daemon = True
-          new_t.start()
-      for idx,t in enumerate(self._batch_q_threads):
-        if not t.is_alive(): # if the thread is dead
-          tf.logging.error('Found batch queue thread dead. Restarting.')
-          new_t = Thread(target=self.fill_batch_queue)
-          self._batch_q_threads[idx] = new_t
-          new_t.daemon = True
-          new_t.start()
-
-
-  def text_gen(self, eg_gen):
-      while True:
-      	art, abs, fname = eg_gen.next()
-      	try:
-      	    file_id = Path(fname).stem
-      	    split = Path(fname).parent.stem
-      	    filepath = '/home/vaibhav/summarisation//cluster/pgn/{}/{}_{}/{}/{}.json'.format('use', 'use', 'kmed', split, file_id)
-      	    if split == 'train':
-      	    	num_clusters = len(abs)
-      	    clustered_articles = ["" for _ in range(num_clusters)]
-      	    with open(filepath, 'r') as f:
-      	    	cluster_res = json.load(f)['labels']
-      	    	assert len(cluster_res) == len(art), "{} {} {}\n{}".format(filepath, len(cluster_res), len(art), art)
-        	for idx, c_id in enumerate(cluster_res):
-        		try:
-        			clustered_articles[c_id] += art[idx]
-        		except:
-        			print(c_id, split, filepath, idx, len(art), len(abs))
-        except ValueError:
-        	tf.logging.error('Failed to get article or abstract from example')
-        	continue
-        if len(art)==0: # See https://github.com/abisee/pointer-generator/issues/1
-        	tf.logging.warning('Found an example with empty article text. Skipping it.')
-        else:
-            for idx, cluster in enumerate(clustered_articles):
-            	if split == 'train':
-            	    yield (cluster, abs[idx])
-            	else:
-            	    yield (cluster, abs)
-
-  def text_generator(self, example_generator):
-    """Generates article and abstract text from tf.Example.
->>>>>>> 78e7619030a4ac78400fbb79128fcd9e52e1edf3
-
     Args:
       example_generator: a generator of tf.Examples from file. See data.example_generator"""
         while True:
